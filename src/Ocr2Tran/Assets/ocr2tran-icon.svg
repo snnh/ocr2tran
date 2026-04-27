@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="36" y1="28" x2="220" y2="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#31dc7e"/>
+      <stop offset="0.52" stop-color="#aab7cb"/>
+      <stop offset="1" stop-color="#2885e1"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="62" y1="58" x2="190" y2="188" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F7FFFF"/>
+      <stop offset="1" stop-color="#C7F1EE"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="52" fill="url(#bg)"/>
+  <path d="M75 62H53v44h14V76h30V62H75zm84 0v14h30v30h14V62h-44zM67 150H53v44h44v-14H67v-30zm122 0v30h-30v14h44v-44h-14z" fill="#B7FFF4"/>
+  <rect x="78" y="82" width="100" height="92" rx="18" fill="url(#panel)"/>
+  <path d="M99 109h58v12H99v-12zm0 28h42v12H99v-12z" fill="#15305F"/>
+  <path d="M157 150h39c12 0 22 9 22 21v12c0 12-10 21-22 21h-17l-20 18v-18h-2c-12 0-22-9-22-21v-12c0-12 10-21 22-21z" fill="#FFD166"/>
+  <path d="M160 174h38v10h-38v-10zm0-16h26v10h-26v-10z" fill="#17335E"/>
+</svg>

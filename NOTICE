@@ -1,0 +1,14 @@
+ocr2tran
+Copyright (C) 2026 ocr2tran contributors
+
+This project is licensed under GPL-3.0-or-later.
+
+Attribution:
+Distributed copies and modified versions must keep this NOTICE file or an
+equivalent visible attribution stating that the work is based on ocr2tran.
+
+Third-party components:
+- Microsoft.ML.OnnxRuntime is referenced through NuGet and is distributed under
+  its own upstream license terms.
+- PaddleOCR/PPOCR models and PaddleOCR runtime are not bundled by default and
+  are governed by their upstream licenses.

@@ -1,0 +1,11 @@
+bin/
+obj/
+dist/
+artifacts/
+.vs/
+.dotnet-cli-home/
+*.user
+*.suo
+releases/
+docs/review.md
+tools
