@@ -48,6 +48,11 @@ public sealed class OcrTextPostProcessor
             processed = MergeNearbyTextRegions(processed);
         }
 
+        if (_settings.MergeNearbyLinesIntoBlocks)
+        {
+            processed = MergeNearbyLinesIntoBlocks(processed);
+        }
+
         return LimitRegions(processed);
     }
 
@@ -127,14 +132,18 @@ public sealed class OcrTextPostProcessor
         var kept = new List<TextRegion>();
         foreach (var region in regions
                      .OrderByDescending(region => region.Confidence)
+                     .ThenByDescending(region => CountMeaningfulCharacters(region.Text))
                      .ThenByDescending(region => region.Bounds.Width * region.Bounds.Height))
         {
-            if (kept.Any(existing => IsDuplicate(existing, region)))
+            var duplicateIndex = kept.FindIndex(existing => IsDuplicateOrRedundant(existing, region));
+            if (duplicateIndex < 0)
             {
-                continue;
+                kept.Add(region);
             }
-
-            kept.Add(region);
+            else if (ShouldReplaceDuplicate(kept[duplicateIndex], region))
+            {
+                kept[duplicateIndex] = region;
+            }
         }
 
         return kept
@@ -143,13 +152,8 @@ public sealed class OcrTextPostProcessor
             .ToList();
     }
 
-    private bool IsDuplicate(TextRegion a, TextRegion b)
+    private bool IsDuplicateOrRedundant(TextRegion a, TextRegion b)
     {
-        if (!NormalizeForComparison(a.Text).Equals(NormalizeForComparison(b.Text), StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
         var intersection = Rectangle.Intersect(a.Bounds, b.Bounds);
         if (intersection.IsEmpty)
         {
@@ -157,7 +161,50 @@ public sealed class OcrTextPostProcessor
         }
 
         var smallerArea = Math.Max(1, Math.Min(Area(a.Bounds), Area(b.Bounds)));
-        return Area(intersection) / (double)smallerArea >= Clamp(_settings.DuplicateOverlapRatio, 0.1, 1);
+        var overlapRatio = Area(intersection) / (double)smallerArea;
+        if (overlapRatio < Clamp(_settings.DuplicateOverlapRatio, 0.1, 1))
+        {
+            return false;
+        }
+
+        var left = NormalizeForComparison(a.Text);
+        var right = NormalizeForComparison(b.Text);
+        if (left.Length == 0 || right.Length == 0)
+        {
+            return false;
+        }
+
+        if (left.Equals(right, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if ((left.Length >= 3 && right.Contains(left, StringComparison.OrdinalIgnoreCase)) ||
+            (right.Length >= 3 && left.Contains(right, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        var lengthRatio = Math.Min(left.Length, right.Length) / (double)Math.Max(left.Length, right.Length);
+        return overlapRatio >= 0.92 && lengthRatio >= 0.65;
+    }
+
+    private static bool ShouldReplaceDuplicate(TextRegion existing, TextRegion candidate)
+    {
+        var existingMeaningful = CountMeaningfulCharacters(existing.Text);
+        var candidateMeaningful = CountMeaningfulCharacters(candidate.Text);
+        if (candidate.Confidence > existing.Confidence + 0.05)
+        {
+            return true;
+        }
+
+        if (candidateMeaningful > existingMeaningful + 1 && candidate.Confidence >= existing.Confidence - 0.2)
+        {
+            return true;
+        }
+
+        return Math.Abs(candidate.Confidence - existing.Confidence) <= 0.05 &&
+               candidateMeaningful > existingMeaningful;
     }
 
     private List<TextRegion> DropShortIsolatedText(IReadOnlyList<TextRegion> regions)
@@ -248,6 +295,54 @@ public sealed class OcrTextPostProcessor
             .OrderBy(region => region.Bounds.Top)
             .ThenBy(region => region.Bounds.Left)
             .ToList();
+    }
+
+    private List<TextRegion> MergeNearbyLinesIntoBlocks(IReadOnlyList<TextRegion> regions)
+    {
+        var blocks = new List<TextBlock>();
+        foreach (var region in regions.OrderBy(region => region.Bounds.Top).ThenBy(region => region.Bounds.Left))
+        {
+            var block = blocks.LastOrDefault(block => CanAppendToBlock(block, region));
+            if (block is null)
+            {
+                blocks.Add(new TextBlock(region));
+                continue;
+            }
+
+            block.Add(region);
+        }
+
+        return blocks
+            .Select(block => block.ToRegion())
+            .OrderBy(region => region.Bounds.Top)
+            .ThenBy(region => region.Bounds.Left)
+            .ToList();
+    }
+
+    private bool CanAppendToBlock(TextBlock block, TextRegion region)
+    {
+        var previous = block.Last;
+        if (IsSameLine(previous.Bounds, region.Bounds))
+        {
+            return false;
+        }
+
+        var verticalGap = Math.Max(0, region.Bounds.Top - previous.Bounds.Bottom);
+        if (verticalGap > Math.Max(0, _settings.SameBlockMaxVerticalGapPx))
+        {
+            return false;
+        }
+
+        var horizontalOverlap = Math.Min(block.Bounds.Right, region.Bounds.Right) - Math.Max(block.Bounds.Left, region.Bounds.Left);
+        var minWidth = Math.Max(1, Math.Min(block.Bounds.Width, region.Bounds.Width));
+        if (horizontalOverlap >= minWidth * 0.35)
+        {
+            return true;
+        }
+
+        var leftAligned = Math.Abs(block.Bounds.Left - region.Bounds.Left) <= Math.Max(12, previous.Bounds.Height);
+        var rightAligned = Math.Abs(block.Bounds.Right - region.Bounds.Right) <= Math.Max(24, previous.Bounds.Height * 2);
+        return leftAligned || rightAligned;
     }
 
     private IReadOnlyList<TextRegion> LimitRegions(IReadOnlyList<TextRegion> regions)
@@ -360,5 +455,61 @@ public sealed class OcrTextPostProcessor
     private static bool IsAsciiWordCharacter(char ch)
     {
         return ch is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9';
+    }
+
+    private sealed class TextBlock
+    {
+        private readonly StringBuilder _text = new();
+        private readonly TextRegion _first;
+        private double _confidenceSum;
+        private int _confidenceCount;
+        private int _count = 1;
+
+        public TextBlock(TextRegion first)
+        {
+            _first = first;
+            Bounds = first.Bounds;
+            Last = first;
+            _text.Append(first.Text);
+            AddConfidence(first);
+        }
+
+        public Rectangle Bounds { get; private set; }
+
+        public TextRegion Last { get; private set; }
+
+        public void Add(TextRegion region)
+        {
+            Bounds = Rectangle.Union(Bounds, region.Bounds);
+            Last = region;
+            _text.AppendLine();
+            _text.Append(region.Text);
+            AddConfidence(region);
+            _count++;
+        }
+
+        public TextRegion ToRegion()
+        {
+            if (_count == 1)
+            {
+                return _first;
+            }
+
+            return new TextRegion(
+                Bounds,
+                _text.ToString(),
+                Confidence: _confidenceCount == 0 ? 0 : _confidenceSum / _confidenceCount);
+        }
+
+        private void AddConfidence(TextRegion region)
+        {
+            if (region.Confidence <= 0)
+            {
+                return;
+            }
+
+            _confidenceSum += region.Confidence;
+            _confidenceCount++;
+        }
     }
 }

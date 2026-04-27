@@ -344,7 +344,7 @@ public sealed class OnnxOcrEngine : IOcrEngine, IDisposable
             var point = queue.Dequeue();
             points.Add(point);
 
-            foreach (var next in Neighbor4(point))
+            foreach (var next in Neighbor8(point))
             {
                 if (next.X < 0 || next.Y < 0 || next.X >= width || next.Y >= height)
                 {
@@ -487,10 +487,16 @@ public sealed class OnnxOcrEngine : IOcrEngine, IDisposable
         using var graphics = Graphics.FromImage(resized);
         graphics.Clear(Color.White);
         graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear;
-        var ratio = Math.Min(targetWidth / (float)crop.Width, targetHeight / (float)crop.Height);
+        var ratio = targetHeight / (float)Math.Max(1, crop.Height);
+        if (crop.Width * ratio > targetWidth)
+        {
+            ratio = targetWidth / (float)Math.Max(1, crop.Width);
+        }
+
         var width = Math.Max(1, (int)Math.Round(crop.Width * ratio));
         var height = Math.Max(1, (int)Math.Round(crop.Height * ratio));
-        graphics.DrawImage(crop, 0, 0, width, height);
+        var y = Math.Max(0, (targetHeight - height) / 2);
+        graphics.DrawImage(crop, 0, y, width, height);
         return resized;
     }
 
@@ -908,12 +914,20 @@ public sealed class OnnxOcrEngine : IOcrEngine, IDisposable
         return ch is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9';
     }
 
-    private static IEnumerable<Point> Neighbor4(Point point)
+    private static IEnumerable<Point> Neighbor8(Point point)
     {
-        yield return new Point(point.X + 1, point.Y);
-        yield return new Point(point.X - 1, point.Y);
-        yield return new Point(point.X, point.Y + 1);
-        yield return new Point(point.X, point.Y - 1);
+        for (var dy = -1; dy <= 1; dy++)
+        {
+            for (var dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dy == 0)
+                {
+                    continue;
+                }
+
+                yield return new Point(point.X + dx, point.Y + dy);
+            }
+        }
     }
 
     public void Dispose()

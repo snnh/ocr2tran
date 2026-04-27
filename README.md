@@ -13,7 +13,7 @@
   - PaddleOCR CLI 兼容模式，支持导入 PPOCR Paddle 推理模型目录
 - 翻译后端：`noop`、百度翻译、Google Cloud Translation、通用 HTTP/AI
 - HTTP/AI 翻译支持普通 JSON、SSE、NDJSON 流式响应
-- OCR 图像预处理、文本后处理、翻译缓存、截图未变化跳过重复 OCR/翻译
+- OCR 图像预处理、文本后处理、同块文本合并翻译、翻译缓存、截图未变化跳过重复 OCR/翻译
 - 插件扩展：自定义 OCR 服务、翻译服务、图片处理和文本处理，支持网络访问清单和用户批准
 - CPU 线程数、CPU 亲和性和内存软上限配置
 
@@ -82,11 +82,13 @@ ONNX 识别结果如果出现“文字框位置正常但文本全是乱码”，
 - `Ctrl+Alt+U`：启动/暂停框选区域自动翻译
 - `Ctrl+Alt+Q`：彻底关闭程序
 
-## 常见调节
+## OCR 和翻译调节
 
-- 识别小字差：在配置面板中调高 `ocr.imagePreprocessing.scale`，或适当提高 `contrast`。
-- 复杂界面误识别太多：提高 `ocr.postProcessing.minConfidence`、`minRegionArea`，或降低 `maxRegions`。
-- 正文被过滤：降低上述阈值，或关闭 `dropShortIsolatedText`。
+- 识别小字差或漏行：优先调高 `ocr.onnx.detLimitSideLen` 或 `ocr.imagePreprocessing.maxLongSide`，必要时略降 `detThreshold` / `boxThreshold`。
+- 重复框或多识别：调高 `ocr.postProcessing.duplicateOverlapRatio` 会更保守，调低会更积极去重；复杂界面还可以提高 `minConfidence`、`minRegionArea` 或降低 `maxRegions`。
+- 正文被过滤：降低 `minConfidence`、`minRegionArea`，或关闭 `dropShortIsolatedText`。
+- 同一段被拆成多次翻译：保持 `mergeNearbyTextRegions` 和 `mergeNearbyLinesIntoBlocks` 开启，并适当调高 `sameBlockMaxVerticalGapPx`。
+- 不同段落被合在一起：调低 `sameBlockMaxVerticalGapPx`，或关闭 `mergeNearbyLinesIntoBlocks`。
 - 覆盖层太挡内容：调低 `overlay.opacity`，或修改 `overlay.background` 为更浅/更深的 HTML 颜色。
 - 热键无效：可能被其他程序占用，程序会跳过占用的热键，可在“配置”里换一个组合。
 

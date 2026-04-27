@@ -134,7 +134,7 @@ public sealed class OcrImagePreprocessingSettings
 
     [DisplayName("最大长边")]
     [Description("预处理后图像最长边上限，避免全屏 OCR 占用过多 CPU 和内存。")]
-    public int MaxLongSide { get; set; } = 3200;
+    public int MaxLongSide { get; set; } = 3840;
 
     [DisplayName("转为灰度")]
     [Description("把 OCR 输入转为灰度图，通常能减少彩色背景干扰。")]
@@ -178,6 +178,10 @@ public sealed class OcrPostProcessingSettings
     [Description("把同一行距离较近的文本块合并后再显示或翻译。")]
     public bool MergeNearbyTextRegions { get; set; } = true;
 
+    [DisplayName("合并邻近行到文本块")]
+    [Description("启用后，位置相邻且对齐的多行 OCR 文本会合并为一个区域，并作为同一段文本发送给翻译接口。")]
+    public bool MergeNearbyLinesIntoBlocks { get; set; } = true;
+
     [DisplayName("丢弃重叠重复框")]
     [Description("丢弃位置高度重叠且文本相同的重复 OCR 结果。")]
     public bool DropOverlappingDuplicates { get; set; } = true;
@@ -192,7 +196,7 @@ public sealed class OcrPostProcessingSettings
 
     [DisplayName("最低置信度")]
     [Description("过滤低置信度结果。仅作用于后端提供了大于 0 置信度的区域。")]
-    public double MinConfidence { get; set; } = 0.5;
+    public double MinConfidence { get; set; } = 0.35;
 
     [DisplayName("最小区域宽度")]
     [Description("OCR 文本框宽度小于该值时过滤。")]
@@ -204,7 +208,7 @@ public sealed class OcrPostProcessingSettings
 
     [DisplayName("最小区域面积")]
     [Description("OCR 文本框面积小于该值时过滤。")]
-    public int MinRegionArea { get; set; } = 96;
+    public int MinRegionArea { get; set; } = 72;
 
     [DisplayName("短文本最大长度")]
     [Description("短孤立文本过滤使用的长度阈值。")]
@@ -217,6 +221,10 @@ public sealed class OcrPostProcessingSettings
     [DisplayName("同行最大水平间距")]
     [Description("同一行内文本块可合并的最大水平间距，单位像素。")]
     public int SameLineMaxHorizontalGapPx { get; set; } = 28;
+
+    [DisplayName("同块最大垂直间距")]
+    [Description("相邻行可合并为同一文本块的最大垂直间距，单位像素。")]
+    public int SameBlockMaxVerticalGapPx { get; set; } = 32;
 
     [DisplayName("重复框重叠比例")]
     [Description("文本相同且重叠比例超过该值时视为重复框。")]
@@ -308,15 +316,15 @@ public sealed class OnnxOcrSettings
 
     [DisplayName("检测长边限制")]
     [Description("检测模型输入长边限制。")]
-    public int DetLimitSideLen { get; set; } = 1536;
+    public int DetLimitSideLen { get; set; } = 2048;
 
     [DisplayName("检测阈值")]
     [Description("DB 检测像素阈值。")]
-    public float DetThreshold { get; set; } = 0.25f;
+    public float DetThreshold { get; set; } = 0.2f;
 
     [DisplayName("文本框阈值")]
     [Description("检测框平均分阈值。")]
-    public float BoxThreshold { get; set; } = 0.45f;
+    public float BoxThreshold { get; set; } = 0.35f;
 
     [DisplayName("文本框外扩比例")]
     [Description("检测框外扩比例。")]
