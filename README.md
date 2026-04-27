@@ -2,7 +2,7 @@
 
 `ocr2tran` 是一个 Windows 本地 OCR + 原位叠加翻译工具。它常驻托盘，通过快捷键截取屏幕文字，使用内置 ONNX Runtime 或 PaddleOCR CLI 识别文本，再把原文或译文按原屏幕位置透明覆盖显示。
 
-## 功能
+## 亮点
 
 - 托盘后台待命和前台控制面板
 - 图形化配置面板，可修改热键、OCR、翻译、覆盖层和性能参数
@@ -19,14 +19,19 @@
 
 ## 快速开始
 
-需要 Windows 和 .NET SDK 10。
+运行环境：
+
+- Windows
+- .NET SDK 10
 
 ```powershell
 dotnet restore .\src\Ocr2Tran\Ocr2Tran.csproj
 dotnet run --project .\src\Ocr2Tran\Ocr2Tran.csproj
 ```
 
-首次运行会从程序目录读取或生成 `appsettings.json`。开发默认配置在 [src/Ocr2Tran/appsettings.json](src/Ocr2Tran/appsettings.json)。发布包解压后直接运行 `Ocr2Tran.exe`；如果要替换旧版本，请先退出托盘里的旧进程，避免 DLL 被占用。
+首次运行会从程序目录读取或生成 `appsettings.json`。开发默认配置在 [src/Ocr2Tran/appsettings.json](src/Ocr2Tran/appsettings.json)。
+
+发布包解压后可直接运行 `Ocr2Tran.exe`。如果要替换旧版本，请先退出托盘里的旧进程，避免 DLL 被占用。
 
 ## 基本使用
 
@@ -38,24 +43,33 @@ dotnet run --project .\src\Ocr2Tran\Ocr2Tran.csproj
 
 ## 推荐 OCR 使用方式
 
-优先使用 ONNX 后端：
+优先使用 ONNX 后端。准备模型目录：
 
-1. 准备目录：
+```text
+ONNX-OCR/
+  det.onnx
+  rec.onnx              # 推荐把字典写入 character metadata
+  ppocr_keys_v1.txt     # 可选；字典已写入 rec.onnx 的 character metadata 时不需要
+```
 
-   ```text
-   ONNX-OCR/
-     det.onnx
-     rec.onnx              # 推荐把字典写入 character metadata
-     ppocr_keys_v1.txt     # 可选；字典已写入 rec.onnx 的 character metadata 时不需要
-   ```
-
-2. 启动程序，打开控制面板。
-3. 点击“导入 ONNX 模型”，选择 `ONNX-OCR` 目录。
-4. 点击“测试 OCR”或按 `Ctrl+Alt+O`。
+然后在控制面板中点击“导入 ONNX 模型”，选择 `ONNX-OCR` 目录，再点击“测试 OCR”或按 `Ctrl+Alt+O`。
 
 如果已有 PaddleOCR/PPOCR Paddle 推理模型，也可以使用“导入 PPOCR 模型”。该模式仍需要本机可执行 `paddleocr.exe`。
 
 ONNX 识别结果如果出现“文字框位置正常但文本全是乱码”，通常是识别模型和字典不匹配，或内置字典没有按 `character` metadata 写入。详见 [PPOCR/ONNX 文件准备指南](docs/ppocr-files.md)。
+
+## 翻译服务
+
+`ocr2tran` 可接入 `noop`、百度翻译、Google Cloud Translation，以及任何兼容 OpenAI Chat Completions 的 HTTP/AI 翻译服务。你也可以使用本地模型服务或自建代理。
+
+如果你需要开箱即用的在线大模型翻译服务，可以参考以下服务商：
+
+| 服务商 | 适合场景 | 接入方式 |
+| --- | --- | --- |
+| DeepSeek(官方) | 游戏文本、实时翻译、通用 OCR 翻译 | [获取 API Key](https://platform.deepseek.com/api_keys)  (此链接不含任何商业化推广和邀请有礼)|
+| 智谱ai(官方) | 游戏文本、实时翻译、通用 OCR 翻译 | [codingplan](https://www.bigmodel.cn/glm-coding?ic=WZCG1QBXSE) |
+
+以上推荐可能包含赞助或推广链接。`ocr2tran` 不会默认向任何第三方服务发送屏幕内容；只有在你主动配置对应翻译服务后，OCR 文本才会发送到该服务。
 
 ## 默认快捷键
 
@@ -68,36 +82,6 @@ ONNX 识别结果如果出现“文字框位置正常但文本全是乱码”，
 - `Ctrl+Alt+U`：启动/暂停框选区域自动翻译
 - `Ctrl+Alt+Q`：彻底关闭程序
 
-## 文档
-
-- [架构说明](docs/architecture.md)
-- [配置说明](docs/configuration.md)
-- [OCR 和翻译接入](docs/integrations.md)
-- [插件开发](docs/plugins.md)
-- [PPOCR 文件准备指南](docs/ppocr-files.md)
-
-## 翻译服务推荐
-
-`ocr2tran` 可接入任何兼容 OpenAI Chat Completions 的 HTTP/AI 翻译服务，也可以使用百度翻译、Google Cloud Translation、本地模型服务或自建代理。
-
-如果你需要开箱即用的在线大模型翻译服务，可以参考以下服务商：
-
-| 服务商 | 适合场景 | 接入方式 |
-| --- | --- | --- |
-| Your Provider | 游戏文本、实时翻译、通用 OCR 翻译 | [获取 API Key](https://example.com) |
-
-以上推荐可能包含赞助或推广链接。`ocr2tran` 不会默认向任何第三方服务发送屏幕内容；只有在你主动配置对应翻译服务后，OCR 文本才会发送到该服务。你也可以使用任意自建、本地或第三方兼容服务。
-
-## 安全提醒
-
-只安装可信来源的主程序和插件。不要随意安装第三方改版主程序，也不要把未知 DLL 放入 `plugins` 目录。插件和主程序运行在同一进程内，恶意插件可以影响识别、翻译结果和本机数据安全。
-
-插件默认需要清单声明网络访问域名，并由用户在配置中批准后才会加载。该机制用于插件准入控制，不会限制内置 HTTP/AI 翻译配置。
-
-## 致谢
-
-`ocr2tran` 的 OCR 接入和模型准备流程参考了 PaddleOCR / PPOCR 生态。感谢 PaddleOCR 项目及其社区提供的文本检测、文本识别模型和相关工具。
-
 ## 常见调节
 
 - 识别小字差：在配置面板中调高 `ocr.imagePreprocessing.scale`，或适当提高 `contrast`。
@@ -105,6 +89,31 @@ ONNX 识别结果如果出现“文字框位置正常但文本全是乱码”，
 - 正文被过滤：降低上述阈值，或关闭 `dropShortIsolatedText`。
 - 覆盖层太挡内容：调低 `overlay.opacity`，或修改 `overlay.background` 为更浅/更深的 HTML 颜色。
 - 热键无效：可能被其他程序占用，程序会跳过占用的热键，可在“配置”里换一个组合。
+
+## 安全提醒
+
+只安装可信来源的主程序和插件。不要随意安装第三方改版主程序，也不要把未知 DLL 放入 `plugins` 目录。插件和主程序运行在同一进程内，恶意插件可以影响识别、翻译结果和本机数据安全。
+
+插件默认需要清单声明网络访问域名，并由用户在配置中批准后才会加载。该机制用于插件准入控制，不会限制内置 HTTP/AI 翻译配置。
+
+## 文档
+
+- [配置说明](docs/configuration.md)
+- [OCR 和翻译接入](docs/integrations.md)
+- [PPOCR 文件准备指南](docs/ppocr-files.md)
+- [插件开发](docs/plugins.md)
+- [架构说明](docs/architecture.md)
+
+## 致谢
+
+`ocr2tran` 的 OCR 能力受益于以下开源项目和社区：
+
+- [PaddleOCR / PPOCR](https://github.com/PaddlePaddle/PaddleOCR)：提供优秀的文本检测、文本识别模型和 OCR 工具生态。
+- [RapidOCR](https://github.com/RapidAI/RapidOCR)：提供易用的 OCR 推理、ONNX 部署经验和模型集成参考。
+
+本项目开发过程中也使用了 DeepSeek V4 和 GitHub Copilot 辅助代码编写、调试和文档整理。
+
+感谢这些项目、工具及其贡献者，让轻量、本地、可集成的 OCR 工作流变得更容易实现。
 
 ## 构建
 
