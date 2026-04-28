@@ -33,7 +33,9 @@ public sealed class BaiduTranslator : ITranslator, IDisposable
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(Math.Max(1000, _settings.TimeoutMs));
-        var json = await _client.GetStringAsync(url, timeout.Token).ConfigureAwait(false);
+        using var response = await _client.GetAsync(url, timeout.Token).ConfigureAwait(false);
+        await HttpResponseErrors.EnsureSuccessAsync(response, timeout.Token).ConfigureAwait(false);
+        var json = await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false);
         using var document = JsonDocument.Parse(json);
         if (!document.RootElement.TryGetProperty("trans_result", out var results) || results.ValueKind != JsonValueKind.Array)
         {

@@ -20,10 +20,12 @@ public sealed class ConfigStore
     {
         Settings = settings;
         Path = path;
+        LastWriteTimeUtc = GetLastWriteTimeUtc(path);
     }
 
     public AppSettings Settings { get; private set; }
     public string Path { get; }
+    public DateTime LastWriteTimeUtc { get; private set; }
 
     public static ConfigStore Load()
     {
@@ -35,9 +37,22 @@ public sealed class ConfigStore
             return new ConfigStore(defaults, path);
         }
 
-        var json = File.ReadAllText(path);
-        var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+        var settings = ReadSettings(path);
         return new ConfigStore(settings, path);
+    }
+
+    public AppSettings Reload()
+    {
+        var settings = ReadSettings(Path);
+        Settings = settings;
+        _dirty = false;
+        LastWriteTimeUtc = GetLastWriteTimeUtc(Path);
+        return settings;
+    }
+
+    public bool HasChangedOnDiskSince(DateTime timestampUtc)
+    {
+        return GetLastWriteTimeUtc(Path) > timestampUtc;
     }
 
     public void MarkDirty()
@@ -60,5 +75,17 @@ public sealed class ConfigStore
 
         File.WriteAllText(Path, JsonSerializer.Serialize(Settings, JsonOptions));
         _dirty = false;
+        LastWriteTimeUtc = GetLastWriteTimeUtc(Path);
+    }
+
+    private static AppSettings ReadSettings(string path)
+    {
+        var json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+    }
+
+    private static DateTime GetLastWriteTimeUtc(string path)
+    {
+        return File.Exists(path) ? File.GetLastWriteTimeUtc(path) : DateTime.MinValue;
     }
 }

@@ -9,5 +9,6 @@ public enum HotkeyAction
     ToggleAutoOcr = 5,
     ToggleAutoTranslate = 6,
     ToggleAutoRegionTranslate = 7,
-    Exit = 8
+    Exit = 8,
+    ClearOverlay = 9
 }

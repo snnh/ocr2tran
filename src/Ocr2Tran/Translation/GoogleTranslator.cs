@@ -48,7 +48,7 @@ public sealed class GoogleTranslator : ITranslator, IDisposable
         request.Content = new StringContent(body, Encoding.UTF8, "application/json");
 
         using var response = await _client.SendAsync(request, timeout.Token).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        await HttpResponseErrors.EnsureSuccessAsync(response, timeout.Token).ConfigureAwait(false);
         var json = await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false);
         using var document = JsonDocument.Parse(json);
         return JsonPathReader.ReadString(document.RootElement, "data.translations.0.translatedText") ?? text;

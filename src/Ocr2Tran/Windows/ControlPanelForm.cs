@@ -19,21 +19,23 @@ public sealed class ControlPanelForm : Form
         _coordinator = coordinator;
         _applySettings = applySettings;
         Text = "ocr2tran";
+        AppIcon.ApplyTo(this);
         Width = 460;
-        Height = 540;
-        MinimumSize = new Size(420, 510);
+        Height = 590;
+        MinimumSize = new Size(420, 560);
         StartPosition = FormStartPosition.CenterScreen;
 
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
-            RowCount = 9,
+            RowCount = 10,
             Padding = new Padding(16),
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
@@ -102,9 +104,14 @@ public sealed class ControlPanelForm : Form
         close.Click += (_, _) => Hide();
         panel.Controls.Add(close, 1, 7);
 
+        var homepage = MakeButton("项目主页");
+        homepage.Click += (_, _) => ProjectHomepage.Open(this);
+        panel.Controls.Add(homepage, 0, 8);
+        panel.SetColumnSpan(homepage, 2);
+
         var exit = MakeButton("退出");
         exit.Click += (_, _) => Application.Exit();
-        panel.Controls.Add(exit, 0, 8);
+        panel.Controls.Add(exit, 0, 9);
         panel.SetColumnSpan(exit, 2);
 
         Controls.Add(panel);

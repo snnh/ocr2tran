@@ -31,7 +31,7 @@ public sealed class HttpTranslator : ITranslator, IDisposable
             : HttpCompletionOption.ResponseContentRead;
 
         using var response = await _client.SendAsync(request, completion, timeout.Token).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        await HttpResponseErrors.EnsureSuccessAsync(response, timeout.Token).ConfigureAwait(false);
 
         if (streamMode == "sse")
         {

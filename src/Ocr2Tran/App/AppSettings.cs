@@ -84,6 +84,10 @@ public sealed class HotkeySettings
     [Description("框选固定区域后切换自动 OCR 和翻译循环。")]
     public string ToggleAutoRegionTranslate { get; set; } = "Ctrl+Alt+U";
 
+    [DisplayName("清空覆盖层")]
+    [Description("清除当前屏幕上的 OCR/翻译覆盖文字。")]
+    public string ClearOverlay { get; set; } = "Ctrl+Alt+C";
+
     [DisplayName("退出")]
     [Description("彻底关闭程序。")]
     public string Exit { get; set; } = "Ctrl+Alt+Q";

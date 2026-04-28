@@ -14,6 +14,7 @@
     <Copyright>Copyright (C) 2026 ocr2tran contributors</Copyright>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/snnh/ocr2tran</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
