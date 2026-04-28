@@ -7,6 +7,10 @@ namespace Ocr2Tran.Windows;
 
 public sealed class ConfigEditorForm : Form
 {
+    private const int NavigationWidth = 190;
+    private const int NavigationMinWidth = 160;
+    private const int EditorMinWidth = 360;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -62,13 +66,12 @@ public sealed class ConfigEditorForm : Form
         var split = new SplitContainer
         {
             Dock = DockStyle.Fill,
-            FixedPanel = FixedPanel.Panel1,
-            SplitterDistance = 190,
-            Panel1MinSize = 160,
-            Panel2MinSize = 360
+            FixedPanel = FixedPanel.Panel1
         };
         split.Panel1.Controls.Add(_navigation);
         split.Panel2.Controls.Add(rightPanel);
+        split.HandleCreated += (_, _) => ApplySplitterDistance(split);
+        split.SizeChanged += (_, _) => ApplySplitterDistance(split);
 
         var buttons = new FlowLayoutPanel
         {
@@ -143,6 +146,24 @@ public sealed class ConfigEditorForm : Form
 
         _sectionTitle.Text = node.Text;
         _propertyGrid.SelectedObject = node.Tag;
+    }
+
+    private static void ApplySplitterDistance(SplitContainer split)
+    {
+        if (split.Width <= 0)
+        {
+            return;
+        }
+
+        var maxDistance = split.Width - split.SplitterWidth - EditorMinWidth;
+        if (maxDistance < NavigationMinWidth)
+        {
+            return;
+        }
+
+        split.SplitterDistance = Math.Clamp(NavigationWidth, NavigationMinWidth, maxDistance);
+        split.Panel1MinSize = NavigationMinWidth;
+        split.Panel2MinSize = EditorMinWidth;
     }
 
     private void SaveAndClose()
