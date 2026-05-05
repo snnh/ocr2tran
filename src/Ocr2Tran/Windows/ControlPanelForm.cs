@@ -7,17 +7,20 @@ public sealed class ControlPanelForm : Form
 {
     private readonly ConfigStore _configStore;
     private readonly OcrTranslationCoordinator _coordinator;
-    private readonly Func<AppSettings, Task> _applySettings;
+    private readonly Func<IWin32Window?, Task> _showSettings;
     private readonly Label _status = new();
     private readonly Button _autoOcr = new();
     private readonly Button _autoTranslate = new();
     private readonly Button _autoRegionTranslate = new();
 
-    public ControlPanelForm(ConfigStore configStore, OcrTranslationCoordinator coordinator, Func<AppSettings, Task> applySettings)
+    public ControlPanelForm(
+        ConfigStore configStore,
+        OcrTranslationCoordinator coordinator,
+        Func<IWin32Window?, Task> showSettings)
     {
         _configStore = configStore;
         _coordinator = coordinator;
-        _applySettings = applySettings;
+        _showSettings = showSettings;
         Text = "ocr2tran";
         AppIcon.ApplyTo(this);
         Width = 460;
@@ -84,7 +87,7 @@ public sealed class ControlPanelForm : Form
         panel.SetColumnSpan(_autoRegionTranslate, 2);
 
         var settings = MakeButton("配置");
-        settings.Click += async (_, _) => await ShowSettingsAsync();
+        settings.Click += async (_, _) => await _showSettings(this);
         panel.Controls.Add(settings, 0, 5);
         panel.SetColumnSpan(settings, 2);
 
@@ -158,18 +161,6 @@ public sealed class ControlPanelForm : Form
         _autoRegionTranslate.Text = _coordinator.AutoRegionTranslateEnabled ? "暂停框选自动翻译" : "启动框选自动翻译";
     }
 
-    private async Task ShowSettingsAsync()
-    {
-        using var form = new ConfigEditorForm(_configStore.Settings);
-        if (form.ShowDialog(this) != DialogResult.OK || form.EditedSettings is null)
-        {
-            return;
-        }
-
-        await _applySettings(form.EditedSettings);
-        UpdateState();
-    }
-
     private async Task ImportPaddleOcrModelAsync()
     {
         using var dialog = new FolderBrowserDialog
@@ -186,13 +177,13 @@ public sealed class ControlPanelForm : Form
 
         try
         {
-            var result = OcrModelImportService.Import(dialog.SelectedPath, _configStore.Settings.Ocr.Paddle);
+            var result = OcrModelImportService.Import(dialog.SelectedPath, _configStore.Settings.Ocr);
             _configStore.MarkDirty();
             _configStore.SaveIfDirty();
             await _coordinator.ReloadOcrEngineAsync();
 
             var message = result.HasRequiredModels
-                ? "OCR 模型已导入。"
+                ? "OCR 模型已导入，已切换到 PaddleOCR CLI 后端。"
                 : "已保存模型目录，但缺少必要模型。";
             if (result.Warnings.Count > 0)
             {

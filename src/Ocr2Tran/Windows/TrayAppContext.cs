@@ -25,7 +25,7 @@ public sealed class TrayAppContext : ApplicationContext
         _configStore = configStore;
         _overlay = new OverlayForm(configStore.Settings.Overlay);
         _coordinator = new OcrTranslationCoordinator(configStore.Settings, _overlay);
-        _controlPanel = new ControlPanelForm(configStore, _coordinator, ApplySettingsAsync);
+        _controlPanel = new ControlPanelForm(configStore, _coordinator, ShowSettingsAsync);
         _ = _controlPanel.Handle;
         _ = _overlay.Handle;
         _notifyIcon = BuildNotifyIcon();
@@ -48,7 +48,7 @@ public sealed class TrayAppContext : ApplicationContext
     {
         var menu = new ContextMenuStrip();
         menu.Items.Add("控制面板", null, (_, _) => ShowControlPanel());
-        menu.Items.Add("配置", null, async (_, _) => await ShowSettingsAsync());
+        menu.Items.Add("配置", null, async (_, _) => await ShowSettingsAsync(null));
         menu.Items.Add("单次 OCR", null, async (_, _) => await _coordinator.RunOcrOnceAsync().ConfigureAwait(false));
         menu.Items.Add("单次 OCR + 翻译", null, async (_, _) => await _coordinator.RunOcrTranslateOnceAsync().ConfigureAwait(false));
         menu.Items.Add("框选 OCR", null, async (_, _) => await _coordinator.RunRegionOcrOnceAsync().ConfigureAwait(false));
@@ -194,7 +194,7 @@ public sealed class TrayAppContext : ApplicationContext
         }
     }
 
-    public async Task ShowSettingsAsync()
+    public async Task ShowSettingsAsync(IWin32Window? preferredOwner = null)
     {
         var openedAt = _configStore.LastWriteTimeUtc;
         _settingsDialogOpen = true;
@@ -202,7 +202,7 @@ public sealed class TrayAppContext : ApplicationContext
         try
         {
             using var form = new ConfigEditorForm(_configStore.Settings);
-            var owner = _controlPanel.Visible ? _controlPanel : null;
+            var owner = preferredOwner ?? (_controlPanel.Visible ? _controlPanel : null);
             if (form.ShowDialog(owner) != DialogResult.OK || form.EditedSettings is null)
             {
                 return;

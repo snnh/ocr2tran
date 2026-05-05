@@ -15,9 +15,11 @@ public sealed class OnnxOcrEngine : IOcrEngine, IDisposable
     private readonly OnnxOcrSettings _settings;
     private readonly InferenceSession _detSession;
     private readonly InferenceSession _recSession;
+    private readonly InferenceSession? _clsSession;
     private readonly string[] _characters;
     private readonly string _detInputName;
     private readonly string _recInputName;
+    private readonly string? _clsInputName;
 
     public OnnxOcrEngine(OnnxOcrSettings settings)
     {
@@ -32,6 +34,12 @@ public sealed class OnnxOcrEngine : IOcrEngine, IDisposable
             throw new FileNotFoundException("ONNX recognition model not found.", settings.RecognitionModelPath);
         }
 
+        if (!string.IsNullOrWhiteSpace(settings.ClassificationModelPath) &&
+            !File.Exists(settings.ClassificationModelPath))
+        {
+            throw new FileNotFoundException("ONNX classification model not found.", settings.ClassificationModelPath);
+        }
+
         var sessionOptions = new SessionOptions
         {
             IntraOpNumThreads = Math.Max(1, settings.IntraOpNumThreads),
@@ -39,6 +47,12 @@ public sealed class OnnxOcrEngine : IOcrEngine, IDisposable
         };
         _detSession = new InferenceSession(settings.DetectionModelPath, sessionOptions);
         _recSession = new InferenceSession(settings.RecognitionModelPath, sessionOptions);
+        if (!string.IsNullOrWhiteSpace(settings.ClassificationModelPath))
+        {
+            _clsSession = new InferenceSession(settings.ClassificationModelPath, sessionOptions);
+            _clsInputName = _clsSession.InputMetadata.Keys.First();
+        }
+
         _characters = LoadCharacters(settings, _recSession);
         _detInputName = _detSession.InputMetadata.Keys.First();
         _recInputName = _recSession.InputMetadata.Keys.First();
@@ -408,6 +422,7 @@ public sealed class OnnxOcrEngine : IOcrEngine, IDisposable
 
     private RecognizedText RecognizeCrop(Bitmap crop)
     {
+        CorrectTextOrientation(crop);
         var targetSize = GetRecognitionTargetSize(crop);
         var segments = SplitForRecognition(crop, targetSize);
         if (segments.Count == 0)
@@ -453,6 +468,82 @@ public sealed class OnnxOcrEngine : IOcrEngine, IDisposable
         targetWidth = Math.Max(32, targetWidth);
 
         return new Size(targetWidth, targetHeight);
+    }
+
+    private void CorrectTextOrientation(Bitmap crop)
+    {
+        if (_clsSession is null || string.IsNullOrWhiteSpace(_clsInputName))
+        {
+            return;
+        }
+
+        var targetSize = GetClassificationTargetSize();
+        using var resized = ResizeForRecognition(crop, targetSize.Width, targetSize.Height);
+        var tensor = new DenseTensor<float>([1, 3, targetSize.Height, targetSize.Width]);
+        FillNormalizedTensor(resized, tensor, [0.5f, 0.5f, 0.5f], [0.5f, 0.5f, 0.5f]);
+
+        var input = NamedOnnxValue.CreateFromTensor(_clsInputName, tensor);
+        using var results = _clsSession.Run([input]);
+        var output = results.First().AsTensor<float>();
+        if (ShouldRotate180(output, _settings.ClsThreshold))
+        {
+            crop.RotateFlip(RotateFlipType.Rotate180FlipNone);
+        }
+    }
+
+    private Size GetClassificationTargetSize()
+    {
+        if (_clsSession is not null && _clsInputName is not null)
+        {
+            var inputShape = _clsSession.InputMetadata[_clsInputName].Dimensions;
+            var shape = inputShape.ToArray();
+            var height = shape.Length >= 3 && shape[^2] > 0 ? shape[^2] : _settings.ClsImageHeight;
+            var width = shape.Length >= 4 && shape[^1] > 0 ? shape[^1] : _settings.ClsImageWidth;
+            return new Size(Math.Max(32, width), Math.Max(16, height));
+        }
+
+        return new Size(Math.Max(32, _settings.ClsImageWidth), Math.Max(16, _settings.ClsImageHeight));
+    }
+
+    private static bool ShouldRotate180(Tensor<float> output, float threshold)
+    {
+        var values = output.ToArray();
+        if (values.Length < 2)
+        {
+            return false;
+        }
+
+        var angle180Score = values[1];
+        var confidence = LooksLikeProbabilityVector(values) ? angle180Score : SoftmaxAt(values, 1);
+        return confidence >= Math.Clamp(threshold, 0, 1);
+    }
+
+    private static bool LooksLikeProbabilityVector(float[] values)
+    {
+        var sum = 0d;
+        foreach (var value in values)
+        {
+            if (value < 0 || value > 1)
+            {
+                return false;
+            }
+
+            sum += value;
+        }
+
+        return sum >= 0.9 && sum <= 1.1;
+    }
+
+    private static double SoftmaxAt(float[] values, int index)
+    {
+        var max = values.Max();
+        var sum = 0d;
+        for (var i = 0; i < values.Length; i++)
+        {
+            sum += Math.Exp(values[i] - max);
+        }
+
+        return sum <= 0 ? 0 : Math.Exp(values[index] - max) / sum;
     }
 
     private int DynamicRecognitionWidth(Bitmap crop, int targetHeight)
@@ -934,6 +1025,7 @@ public sealed class OnnxOcrEngine : IOcrEngine, IDisposable
     {
         _detSession.Dispose();
         _recSession.Dispose();
+        _clsSession?.Dispose();
     }
 
     private sealed record DetectionInput(DenseTensor<float> Tensor, int OriginalWidth, int OriginalHeight, float ScaleX, float ScaleY);

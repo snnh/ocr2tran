@@ -311,7 +311,7 @@ public sealed class OnnxOcrSettings
     public string RecognitionModelPath { get; set; } = "";
 
     [DisplayName("方向分类模型路径")]
-    [Description("方向分类模型路径，当前保留配置。")]
+    [Description("方向分类模型路径。配置后会在识别前判断文本是否需要旋转 180 度。")]
     public string ClassificationModelPath { get; set; } = "";
 
     [DisplayName("识别字典路径")]
@@ -345,6 +345,18 @@ public sealed class OnnxOcrSettings
     [DisplayName("识别输入宽度")]
     [Description("识别模型输入宽度 fallback。")]
     public int RecImageWidth { get; set; } = 480;
+
+    [DisplayName("方向分类输入高度")]
+    [Description("方向分类模型输入高度 fallback。")]
+    public int ClsImageHeight { get; set; } = 48;
+
+    [DisplayName("方向分类输入宽度")]
+    [Description("方向分类模型输入宽度 fallback。")]
+    public int ClsImageWidth { get; set; } = 192;
+
+    [DisplayName("方向分类阈值")]
+    [Description("方向分类模型判定为 180 度时的最低置信度。")]
+    public float ClsThreshold { get; set; } = 0.9f;
 
     [DisplayName("ONNX CPU 线程数")]
     [Description("ONNX Runtime IntraOp 线程数。")]

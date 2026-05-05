@@ -348,18 +348,24 @@ public sealed class OcrTranslationCoordinator : IDisposable
                 return;
             }
 
-            var preprocessedScreen = _imagePreprocessor.Process(screen);
-            var ocrScreen = await _plugins.ProcessImageAsync(preprocessedScreen, cancellationToken).ConfigureAwait(false);
             IReadOnlyList<TextRegion> regions;
+            var preprocessedScreen = _imagePreprocessor.Process(screen);
+            CapturedScreen? ocrScreen = null;
             try
             {
+                ocrScreen = await _plugins.ProcessImageAsync(preprocessedScreen, cancellationToken).ConfigureAwait(false);
                 regions = await _ocrEngine.RecognizeAsync(ocrScreen, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
-                if (!ReferenceEquals(ocrScreen, screen))
+                if (ocrScreen is not null && !ReferenceEquals(ocrScreen, screen))
                 {
                     ocrScreen.Dispose();
+                }
+
+                if (!ReferenceEquals(preprocessedScreen, screen) && !ReferenceEquals(preprocessedScreen, ocrScreen))
+                {
+                    preprocessedScreen.Dispose();
                 }
             }
 

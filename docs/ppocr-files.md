@@ -28,7 +28,7 @@ ONNX-OCR/
   ppocr_keys_v1.txt
 ```
 
-方向分类模型可放在同一目录，当前只保存路径，暂不参与旋转判定：
+方向分类模型可放在同一目录，用于在识别前做 0/180 度文本方向修正：
 
 ```text
 ONNX-OCR/
@@ -61,7 +61,7 @@ ONNX-OCR/
 }
 ```
 
-当前 ONNX 后端使用检测模型 + 识别模型即可工作。方向分类模型路径会被保存，但旋转判定尚未接入。`recCharDictPath` 为空时，程序会尝试从 `rec.onnx` 的 metadata 中读取 `character` 字典。
+当前 ONNX 后端使用检测模型 + 识别模型即可工作。配置方向分类模型后，程序会在文字识别前判断检测框裁剪图是否需要旋转 180 度；`recCharDictPath` 为空时，程序会尝试从 `rec.onnx` 的 metadata 中读取 `character` 字典。
 
 如果目录里存在匹配的 `.txt` 字典文件，导入器会自动填入 `recCharDictPath`，程序会优先使用外置字典：
 

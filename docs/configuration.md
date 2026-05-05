@@ -92,6 +92,9 @@
     "minBoxSize": 6,
     "recImageHeight": 48,
     "recImageWidth": 480,
+    "clsImageHeight": 48,
+    "clsImageWidth": 192,
+    "clsThreshold": 0.9,
     "intraOpNumThreads": 2
   }
 }
@@ -100,13 +103,15 @@
 - `modelRoot`：用户导入的 ONNX 模型总目录。
 - `detectionModelPath`：文本检测 ONNX 模型。
 - `recognitionModelPath`：文字识别 ONNX 模型。
-- `classificationModelPath`：方向分类 ONNX 模型，当前保留配置。
+- `classificationModelPath`：方向分类 ONNX 模型。配置后会在文字识别前判断裁剪文本是否需要旋转 180 度。
 - `recCharDictPath`：识别字典。字典已用 `character` metadata 集成到 `rec.onnx` 时可留空，程序会按换行分隔读取字符表，并保留空白字符以避免类别索引错位。显式配置外置字典时，优先使用外置字典。
 - `detLimitSideLen`：检测输入长边限制。小字漏识别时可调高，性能不足时调低。
 - `detThreshold` / `boxThreshold`：检测阈值。漏识别时可降低，误识别或噪声多时可提高。
 - `unclipRatio`：检测框外扩比例。
 - `minBoxSize`：过滤过小文本框。
 - `recImageHeight` / `recImageWidth`：识别输入尺寸 fallback。
+- `clsImageHeight` / `clsImageWidth`：方向分类输入尺寸 fallback，常见 PPOCR cls 模型为 `48 x 192`。
+- `clsThreshold`：方向分类判定为 180 度时的最低置信度，默认 `0.9`。
 - `intraOpNumThreads`：ONNX Runtime CPU 线程数。
 
 ### PaddleOCR CLI

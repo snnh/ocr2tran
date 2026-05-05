@@ -16,6 +16,7 @@
 ONNX-OCR/
   det.onnx
   rec.onnx
+  cls.onnx             # 可选；用于 0/180 度文本方向修正
   ppocr_keys_v1.txt   # 可选；rec.onnx 已内置 character metadata 时不需要
 ```
 
@@ -36,7 +37,7 @@ ONNX-OCR/
 }
 ```
 
-当前 ONNX 后端实现 DB 风格检测和 CTC 识别。检测框为轴对齐矩形；方向分类模型目前只保存路径，尚未参与推理。
+当前 ONNX 后端实现 DB 风格检测、可选方向分类和 CTC 识别。检测框为轴对齐矩形；配置 `cls.onnx` 后，会在识别前对检测框裁剪图执行 0/180 度方向分类，并在分类结果为 180 度且超过阈值时旋转后再识别。
 
 ### ONNX 内置字典
 

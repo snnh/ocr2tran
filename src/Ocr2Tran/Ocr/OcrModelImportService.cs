@@ -7,7 +7,7 @@ public static class OcrModelImportService
     private static readonly string[] ModelFileNames = ["inference.pdmodel", "model.pdmodel", "inference.json"];
     private static readonly string[] ParamFileNames = ["inference.pdiparams", "model.pdiparams"];
 
-    public static OcrModelImportResult Import(string root, PaddleSettings settings)
+    public static OcrModelImportResult Import(string root, OcrSettings settings)
     {
         if (!Directory.Exists(root))
         {
@@ -42,21 +42,23 @@ public static class OcrModelImportService
             warnings.Add("未找到识别字典文件，中文模型通常需要 ppocr_keys_v1.txt。");
         }
 
+        var paddle = settings.Paddle;
         if (executable.Length > 0)
         {
-            settings.Executable = executable;
+            paddle.Executable = executable;
         }
-        else if (settings.Executable.Equals("paddleocr.exe", StringComparison.OrdinalIgnoreCase))
+        else if (paddle.Executable.Equals("paddleocr.exe", StringComparison.OrdinalIgnoreCase))
         {
             warnings.Add("未在导入目录中找到 paddleocr.exe，将继续使用 PATH 中的 paddleocr.exe。");
         }
 
-        settings.UseImportedModels = true;
-        settings.ModelRoot = root;
-        settings.DetectionModelDir = det;
-        settings.RecognitionModelDir = rec;
-        settings.ClassificationModelDir = cls;
-        settings.RecCharDictPath = dict;
+        settings.Provider = "paddleCli";
+        paddle.UseImportedModels = true;
+        paddle.ModelRoot = root;
+        paddle.DetectionModelDir = det;
+        paddle.RecognitionModelDir = rec;
+        paddle.ClassificationModelDir = cls;
+        paddle.RecCharDictPath = dict;
 
         return new OcrModelImportResult(root, det, rec, cls, dict, warnings);
     }
